@@ -1,0 +1,14 @@
+# Database connectivity
+psycopg2-binary==2.9.9
+
+# Environment variables
+python-dotenv==1.0.0
+
+# HTTP requests (for MindsDB API if needed)
+requests==2.31.0
+
+# Data manipulation
+pandas==2.1.4
+
+# Utility
+colorama==0.4.6
