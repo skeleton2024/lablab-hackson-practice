@@ -11,7 +11,9 @@ import logging
 import random
 import time
 from datetime import datetime
-from typing import Dict, Any
+from typing import Dict, Any, Optional
+import psycopg2
+from psycopg2.extras import RealDictCursor
 
 from config import (
     ROBOT_ID,
@@ -29,7 +31,12 @@ from config import (
     STATUS_WARNING,
     STATUS_ERROR,
     LOG_FORMAT,
-    LOG_DATE_FORMAT
+    LOG_DATE_FORMAT,
+    DB_HOST,
+    DB_PORT,
+    DB_NAME,
+    DB_USER,
+    DB_PASSWORD
 )
 
 # Configure logging
@@ -44,16 +51,19 @@ logger = logging.getLogger(__name__)
 class RobotSimulator:
     """Simulates robot telemetry data generation."""
 
-    def __init__(self, robot_id: str = ROBOT_ID):
+    def __init__(self, robot_id: str = ROBOT_ID, enable_db: bool = True):
         """
         Initialize the robot simulator.
 
         Args:
             robot_id: Unique identifier for the robot
+            enable_db: Whether to enable database connectivity
         """
         self.robot_id = robot_id
         self.battery_level = INITIAL_BATTERY_LEVEL
         self.iteration = 0
+        self.enable_db = enable_db
+        self.db_connection: Optional[psycopg2.extensions.connection] = None
 
         logger.info(f"Initialized Robot Simulator for {self.robot_id}")
         logger.info(f"Configuration:")
@@ -62,7 +72,81 @@ class RobotSimulator:
         logger.info(f"  - Anomaly probability: {ANOMALY_PROBABILITY * 100}%")
         logger.info(f"  - Battery anomaly threshold: <{BATTERY_ANOMALY_THRESHOLD}%")
         logger.info(f"  - Temperature anomaly threshold: >{TEMPERATURE_ANOMALY_THRESHOLD}°C")
+        logger.info(f"  - Database enabled: {self.enable_db}")
+
+        if self.enable_db:
+            self._connect_to_database()
+
         logger.info("-" * 80)
+
+    def _connect_to_database(self):
+        """Establish connection to PostgreSQL database."""
+        try:
+            logger.info(f"Connecting to database at {DB_HOST}:{DB_PORT}...")
+            self.db_connection = psycopg2.connect(
+                host=DB_HOST,
+                port=DB_PORT,
+                database=DB_NAME,
+                user=DB_USER,
+                password=DB_PASSWORD,
+                connect_timeout=10
+            )
+            self.db_connection.autocommit = False
+            logger.info("✅ Database connection established successfully")
+        except psycopg2.Error as e:
+            logger.error(f"❌ Failed to connect to database: {e}")
+            logger.warning("Continuing without database connectivity...")
+            self.enable_db = False
+            self.db_connection = None
+
+    def _insert_telemetry_to_db(self, telemetry: Dict[str, Any]) -> bool:
+        """
+        Insert telemetry data into PostgreSQL database.
+
+        Args:
+            telemetry: Telemetry data dictionary
+
+        Returns:
+            True if insertion was successful, False otherwise
+        """
+        if not self.enable_db or not self.db_connection:
+            return False
+
+        try:
+            with self.db_connection.cursor() as cursor:
+                insert_query = """
+                INSERT INTO robot_telemetry
+                (timestamp, robot_id, battery_level, temperature_celsius, status_code)
+                VALUES (%s, %s, %s, %s, %s)
+                """
+
+                cursor.execute(insert_query, (
+                    telemetry['timestamp'],
+                    telemetry['robot_id'],
+                    telemetry['battery_level'],
+                    telemetry['temperature_celsius'],
+                    telemetry['status_code']
+                ))
+
+                self.db_connection.commit()
+                return True
+
+        except psycopg2.Error as e:
+            logger.error(f"❌ Database insert failed: {e}")
+            self.db_connection.rollback()
+
+            # Try to reconnect if connection was lost
+            if self.db_connection.closed:
+                logger.info("Attempting to reconnect to database...")
+                self._connect_to_database()
+
+            return False
+
+    def close(self):
+        """Close database connection."""
+        if self.db_connection and not self.db_connection.closed:
+            self.db_connection.close()
+            logger.info("Database connection closed")
 
     def generate_battery_level(self) -> float:
         """
@@ -229,8 +313,15 @@ class RobotSimulator:
                 # Generate telemetry
                 telemetry = self.generate_telemetry()
 
+                # Insert into database
+                db_inserted = False
+                if self.enable_db:
+                    db_inserted = self._insert_telemetry_to_db(telemetry)
+
                 # Log the telemetry data
                 log_message = self.format_telemetry_log(telemetry)
+                if db_inserted:
+                    log_message += " 💾"
 
                 if telemetry['status_code'] == STATUS_ERROR:
                     logger.error(log_message)
@@ -256,7 +347,12 @@ class RobotSimulator:
         except KeyboardInterrupt:
             logger.info("\n\n⏹️  Simulator stopped by user")
             logger.info(f"Total iterations: {self.iteration}")
+            self.close()
             logger.info("Goodbye! 👋")
+        except Exception as e:
+            logger.error(f"Unexpected error: {e}")
+            self.close()
+            raise
 
 
 def main():

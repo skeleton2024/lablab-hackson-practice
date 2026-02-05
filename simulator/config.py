@@ -31,6 +31,13 @@ STATUS_OK = 0
 STATUS_WARNING = 1
 STATUS_ERROR = 2
 
+# Database Configuration
+DB_HOST = os.getenv('DB_HOST', 'localhost')
+DB_PORT = int(os.getenv('DB_PORT', '5432'))
+DB_NAME = os.getenv('DB_NAME', 'robot_monitor_db')
+DB_USER = os.getenv('DB_USER', 'robot_user')
+DB_PASSWORD = os.getenv('DB_PASSWORD', '')
+
 # Logging Configuration
 LOG_FORMAT = '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
 LOG_DATE_FORMAT = '%Y-%m-%d %H:%M:%S'
