@@ -53,3 +53,7 @@ temp/
 .claude/
 .specstory/
 .cursorindexingignore
+
+
+SETUP_INSTRUCTIONS.md
+setup_postgres.sh
