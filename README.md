@@ -1,400 +1,907 @@
 # Smart Robot Monitor with AI Alerts
 
-A tutorial project demonstrating the integration of **Vultr**, **MindsDB**, and **Gemini API** to build an intelligent robot monitoring system that generates natural language maintenance reports.
+This is a tutorial project demonstrating the integration of **Vultr**, **MindsDB**, and **Gemini API** to build an intelligent robot monitoring system that generates natural language maintenance reports.
 
-## 🎯 Project Overview
+## What You'll Build
 
-This project simulates a robotic system that:
-- Generates telemetry data (battery, temperature, status)
-- Stores data in a PostgreSQL database on Vultr
-- Uses MindsDB to detect anomalies via threshold rules
-- Leverages Gemini AI to generate contextual maintenance reports and action recommendations
+By the end of this tutorial, you'll have created a complete AI-powered monitoring system that:
+- Simulates real-time robot telemetry data (battery, temperature, status)
+- Stores data in a PostgreSQL database hosted on Vultr
+- Uses MindsDB to connect AI models to your database
+- Generates natural language maintenance reports using Google Gemini
+- Provides an intelligent chatbot agent to query your robot fleet data
 
-## 🏗️ Architecture
+## Prerequisites
 
-```
-┌─────────────────┐
-│ Robot Simulator │ (Python Script)
-│  - Battery      │
-│  - Temperature  │
-│  - Status       │
-└────────┬────────┘
-         │
-         ▼
-┌─────────────────────────────────────────┐
-│         Vultr Cloud Instance            │
-│  ┌──────────────────────────────────┐   │
-│  │      PostgreSQL Database         │   │
-│  │   (robot_telemetry table)        │   │
-│  └──────────┬───────────────────────┘   │
-│             │                            │
-│  ┌──────────▼───────────────────────┐   │
-│  │         MindsDB                  │   │
-│  │  - Anomaly View (Thresholds)     │   │
-│  │  - Gemini Model Integration      │   │
-│  └──────────┬───────────────────────┘   │
-└─────────────┼───────────────────────────┘
-              │
-              ▼
-     ┌────────────────────┐
-     │   Gemini API       │
-     │ (NL Report Gen)    │
-     └────────────────────┘
-```
+Before you begin, make sure you have:
 
-## 📁 Project Structure
-
-```
-vultr-mindsdb-gemini/
-├── README.md                          # This file - project overview and plan
-├── .env.example                       # Environment variables template
-├── requirements.txt                   # Python dependencies
-│
-├── simulator/                         # Robot simulator component
-│   ├── __init__.py
-│   ├── robot_simulator.py            # Main simulator script
-│   ├── config.py                     # Simulator configuration
-│   └── README.md                     # Simulator documentation
-│
-├── database/                          # Database related files
-│   ├── schemas/
-│   │   └── robot_telemetry.sql      # Table schema definition
-│   ├── migrations/
-│   │   └── 001_initial_setup.sql    # Initial database setup
-│   └── README.md                     # Database setup instructions
-│
-├── mindsdb/                           # MindsDB configurations
-│   ├── queries/
-│   │   ├── create_view.sql          # Anomaly detection view
-│   │   ├── create_gemini_model.sql  # Gemini model setup
-│   │   └── query_alerts.sql         # Query for getting AI reports
-│   ├── models/
-│   │   └── gemini_config.yaml       # Gemini model configuration
-│   └── README.md                     # MindsDB setup instructions
-│
-├── scripts/                           # Utility scripts
-│   ├── setup_database.sh             # Database initialization script
-│   ├── test_connection.py            # Test database connectivity
-│   └── run_simulator.sh              # Start the simulator
-│
-├── config/                            # Configuration files
-│   └── vultr_setup.md                # Vultr instance setup guide
-│
-└── docs/                              # Documentation
-    ├── TUTORIAL.md                    # Step-by-step tutorial
-    ├── TROUBLESHOOTING.md             # Common issues and solutions
-    └── ARCHITECTURE.md                # Detailed architecture explanation
-```
-
-## 🚀 Implementation Plan
-
-### Phase 1: Infrastructure Setup (Vultr)
-
-**Objective**: Deploy and configure a Vultr cloud instance with PostgreSQL and MindsDB
-
-**Tasks**:
-- [ ] 1.1 Create Vultr account and deploy a cloud compute instance
-  - Recommended: Ubuntu 22.04 LTS
-  - Minimum specs: 2 vCPU, 4GB RAM, 80GB SSD
-  - Configure firewall rules (PostgreSQL: 5432, MindsDB: 47334)
-
-- [ ] 1.2 Install PostgreSQL on Vultr instance
-  - Install PostgreSQL 14+
-  - Configure remote access
-  - Create database: `robot_monitor_db`
-  - Create user with appropriate privileges
-
-- [ ] 1.3 Install MindsDB on Vultr instance
-  - Install via Docker or pip
-  - Configure MindsDB to connect to local PostgreSQL
-  - Verify MindsDB web interface access
-
-- [ ] 1.4 Secure the instance
-  - Set up SSH key authentication
-  - Configure firewall (UFW)
-  - Set strong passwords
-
-**Deliverables**:
-- Running Vultr instance
-- PostgreSQL accessible remotely
-- MindsDB running and accessible
-- Connection credentials documented
+1. **Vultr Account** - Sign up at [vultr.com](https://www.vultr.com/) and add a payment method
+2. **MindsDB** - We'll install this via Docker in the tutorial
+3. **Google Gemini API Key** - Get one free at [Google AI Studio](https://aistudio.google.com/apikey)
+4. **Docker** - Install from [docker.com](https://www.docker.com/get-started/)
+5. **Basic Knowledge** - Familiarity with SQL, Python, and command line basics
+6. **Python 3.8+** - Installed on your local machine
 
 ---
 
-### Phase 2: Database Schema Design
+## Part 1: Understanding the Python Robot Simulator
 
-**Objective**: Create the database schema for storing robot telemetry data
+To keep this tutorial practical, we'll simulate robot telemetry data using Python rather than connecting to actual physical robots. This simulator mimics real-world robot behavior and continuously sends data to your database.
 
-**Tasks**:
-- [ ] 2.1 Design `robot_telemetry` table schema
-  - timestamp (TIMESTAMPTZ)
-  - robot_id (VARCHAR)
-  - battery_level (FLOAT)
-  - temperature_celsius (FLOAT)
-  - status_code (INT)
-  - Add appropriate indexes
+### What the Simulator Does
 
-- [ ] 2.2 Create migration scripts
-  - Initial schema creation
-  - Sample data insertion (optional)
+The simulator generates realistic robot telemetry with the following features:
 
-- [ ] 2.3 Test database schema
-  - Manual INSERT/SELECT queries
-  - Verify data types and constraints
+**Core Functionality:**
+- **Battery Monitoring**: Simulates gradual battery drain from 100% down to 0%, then auto-recharges
+- **Temperature Tracking**: Generates realistic temperature readings using normal distribution (fluctuates around 55°C)
+- **Status Codes**: Assigns integer codes representing robot health (0=OK, 1=WARNING, 2=ERROR)
+- **Anomaly Injection**: Randomly introduces problems like low battery or overheating (configurable probability)
+- **Real-time Logging**: Displays color-coded status indicators in your terminal
+- **Auto-reconnect**: Handles database connection failures gracefully
 
-**Deliverables**:
-- `robot_telemetry.sql` schema file
-- Migration script
-- Tested and working database table
+**Technical Details:**
+- **Data Generation Rate**: Configurable interval (default: every 5 seconds)
+- **Battery Drain Rate**: 0.5% per reading by default
+- **Anomaly Probability**: 15% chance of introducing an anomaly
+- **Temperature Range**: 40-70°C under normal conditions, can spike to 95°C during anomalies
+- **Database**: Uses PostgreSQL with automatic transaction handling
 
----
+The simulator consists of three main files in the [`simulator/`](./simulator) directory:
+- [`robot_simulator.py`](./simulator/robot_simulator.py) - Main simulator script with database connectivity
+- [`config.py`](./simulator/config.py) - Configuration settings loaded from environment variables
+- `__init__.py` - Python package initialization
 
-### Phase 3: Robot Simulator Development
+> 📁 **View the complete simulator code**: [simulator/](./simulator)
 
-**Objective**: Build a Python script that simulates robot telemetry data
+### How It Works
 
-**Tasks**:
-- [ ] 3.1 Set up Python environment
-  - Create virtual environment
-  - Install dependencies (psycopg2, python-dotenv)
-  - Create requirements.txt
+The simulator operates in a continuous loop:
+1. **Generate Data**: Creates battery and temperature readings with realistic fluctuations
+2. **Inject Anomalies**: Randomly introduces issues based on configured probability
+3. **Determine Status**: Evaluates readings and assigns status codes (OK/WARNING/ERROR)
+4. **Store in Database**: Inserts telemetry into PostgreSQL with automatic retries
+5. **Log Output**: Displays formatted readings with visual indicators (✅ OK, ⚠️ WARNING, 🚨 ERROR)
+6. **Wait**: Pauses for the configured interval before the next reading
 
-- [ ] 3.2 Develop simulator core logic
-  - Generate realistic battery drain (100% → 0%)
-  - Simulate temperature fluctuations (normal: 40-70°C)
-  - Create anomaly injection logic (temp spikes, low battery)
-  - Add configurable intervals (default: 5 seconds)
-
-- [ ] 3.3 Implement database connection
-  - Read connection string from environment variables
-  - Insert telemetry data into PostgreSQL
-  - Error handling and retry logic
-
-- [ ] 3.4 Add configuration options
-  - Robot ID
-  - Anomaly probability
-  - Data generation rate
-  - Threshold values
-
-**Deliverables**:
-- Working `robot_simulator.py`
-- Configuration file
-- requirements.txt
-- Documentation on running the simulator
+When battery reaches 0%, it automatically recharges to 100% to enable continuous testing.
 
 ---
 
-### Phase 4: MindsDB Integration
+## Part 2: Setting Up Vultr & Creating the PostgreSQL Database
 
-**Objective**: Set up MindsDB to detect anomalies and integrate with Gemini API
+Vultr will host both our PostgreSQL database and MindsDB instance in the cloud, making them accessible from anywhere.
 
-**Tasks**:
-- [ ] 4.1 Connect MindsDB to PostgreSQL
-  - Create database connection in MindsDB
-  - Test query access to `robot_telemetry` table
+### Step 2.1: Deploy Your Vultr Server
 
-- [ ] 4.2 Create anomaly detection view
-  ```sql
-  CREATE VIEW anomalous_robots AS
-  SELECT * FROM postgresql_db.robot_telemetry
-  WHERE battery_level < 20 OR temperature_celsius > 80;
-  ```
+1. **Navigate to Vultr Dashboard**
+   Go to [my.vultr.com/dashboard](https://my.vultr.com/dashboard/) and click the **"Deploy +"** button in the top right corner.
 
-- [ ] 4.3 Set up Gemini API credentials
-  - Obtain Gemini API key from Google AI Studio
-  - Configure API key in MindsDB
+   ![Deploy a server](./images/dashboard-deploy-server.png)
 
-- [ ] 4.4 Create Gemini model in MindsDB
-  ```sql
-  CREATE MODEL gemini_robot_reporter
-  PREDICT report
-  USING
+2. **Choose Server Type**
+   - Select **"Cloud Compute"** for a standard virtual machine
+   - Choose **"Ubuntu 22.04 LTS"** as your operating system
+
+3. **Select Server Location**
+   Pick a data center closest to your location for better latency
+
+4. **Choose Server Size**
+   - For this tutorial, a **$6/month plan** (1 CPU, 1GB RAM) is sufficient
+   - You can scale up later if needed
+
+5. **Add SSH Key (Recommended)**
+   If you have an SSH key, add it for secure access. Otherwise, you'll receive a root password via email.
+
+6. **Configure Additional Settings**
+   - Scroll down to the **"Configure"** section
+   - Set a hostname like `robot-monitor-server`
+   - Enable **"Auto Backups"** if desired (optional, costs extra)
+
+7. **Deploy Server**
+   Click **"Deploy Now"** at the bottom
+
+   > **Note**: You need to complete your profile and add a valid payment method to deploy a server.
+
+   ![Deploy a server configuration](./images/deploy-a-server.png)
+
+8. **Wait for Deployment**
+   Server deployment typically takes 2-5 minutes. Once ready, you'll see the status change to **"Running"**.
+
+### Step 2.2: Access Your Server
+
+1. Click on your newly created server from the dashboard
+2. Copy the **IP Address** and **Password** (if not using SSH keys)
+
+   ![Server Dashboard](./images/server-dashboard.png)
+
+3. **Connect via SSH**:
+   ```bash
+   ssh root@your-server-ip-address
+   ```
+   Enter the password when prompted (or use your SSH key)
+
+### Step 2.3: Install PostgreSQL on Vultr
+
+Now that you're connected to your server, let's install PostgreSQL:
+
+```bash
+# Update package lists
+sudo apt update
+
+# Install PostgreSQL
+sudo apt install postgresql postgresql-contrib -y
+
+# Start PostgreSQL service
+sudo systemctl start postgresql
+sudo systemctl enable postgresql
+
+# Verify installation
+sudo systemctl status postgresql
+```
+
+You should see **"active (running)"** in green.
+
+### Step 2.4: Configure PostgreSQL
+
+```bash
+# Switch to postgres user
+sudo -i -u postgres
+
+# Create the database
+createdb robot_monitor_db
+
+# Create a dedicated user
+psql -c "CREATE USER robot_user WITH PASSWORD 'your_secure_password';"
+
+# Grant privileges
+psql -c "GRANT ALL PRIVILEGES ON DATABASE robot_monitor_db TO robot_user;"
+
+# Exit postgres user
+exit
+```
+
+### Step 2.5: Create the Database Table
+
+You can use our pre-made schema file or create it manually:
+
+**Option 1: Use the provided schema file**
+```bash
+# Download or use the schema from the repository
+# File location: database/setup_database.sql
+
+sudo -u postgres psql -d robot_monitor_db -f database/setup_database.sql
+```
+
+> 📁 **View the database schema**: [`database/setup_database.sql`](./database/setup_database.sql)
+
+**Option 2: Create manually**
+```bash
+# Create the schema file
+cat > /tmp/robot_telemetry.sql << 'EOF'
+-- Connect to the database
+\c robot_monitor_db
+
+-- Create the telemetry table
+CREATE TABLE IF NOT EXISTS robot_telemetry (
+    id SERIAL PRIMARY KEY,
+    timestamp TIMESTAMP NOT NULL DEFAULT NOW(),
+    robot_id VARCHAR(50) NOT NULL,
+    battery_level DECIMAL(5,2) NOT NULL CHECK (battery_level >= 0 AND battery_level <= 100),
+    temperature_celsius DECIMAL(5,2) NOT NULL,
+    status_code INTEGER NOT NULL CHECK (status_code IN (0, 1, 2)),
+    created_at TIMESTAMP DEFAULT NOW()
+);
+
+-- Create indexes for faster queries
+CREATE INDEX idx_robot_telemetry_timestamp ON robot_telemetry(timestamp DESC);
+CREATE INDEX idx_robot_telemetry_robot_id ON robot_telemetry(robot_id);
+CREATE INDEX idx_robot_telemetry_status ON robot_telemetry(status_code);
+
+-- Grant permissions to robot_user
+GRANT ALL PRIVILEGES ON TABLE robot_telemetry TO robot_user;
+GRANT USAGE, SELECT ON SEQUENCE robot_telemetry_id_seq TO robot_user;
+EOF
+
+# Run the schema
+sudo -u postgres psql -f /tmp/robot_telemetry.sql
+```
+
+### Step 2.6: Configure PostgreSQL for Remote Access
+
+By default, PostgreSQL only accepts local connections. We need to allow remote access:
+
+```bash
+# Edit PostgreSQL configuration
+sudo nano /etc/postgresql/14/main/postgresql.conf
+```
+
+Find the line `#listen_addresses = 'localhost'` and change it to:
+```
+listen_addresses = '*'
+```
+
+Press `Ctrl+X`, then `Y`, then `Enter` to save.
+
+```bash
+# Edit client authentication
+sudo nano /etc/postgresql/14/main/pg_hba.conf
+```
+
+Add this line at the end:
+```
+host    all             all             0.0.0.0/0            md5
+```
+
+Press `Ctrl+X`, then `Y`, then `Enter` to save.
+
+```bash
+# Restart PostgreSQL
+sudo systemctl restart postgresql
+```
+
+### Step 2.7: Configure Firewall
+
+```bash
+# Allow PostgreSQL port
+sudo ufw allow 5432/tcp
+
+# Allow MindsDB port (we'll install this next)
+sudo ufw allow 47334/tcp
+
+# Enable firewall
+sudo ufw enable
+```
+
+**✅ Checkpoint**: Your PostgreSQL database is now running on Vultr and accessible remotely.
+
+---
+
+## Part 3: Connecting the Simulator to Your Vultr Database
+
+Now let's run the robot simulator on your local machine and connect it to the database on Vultr.
+
+### Step 3.1: Set Up Your Local Environment
+
+```bash
+# Navigate to the project directory
+cd vultr-mindsdb-gemini
+
+# Create a virtual environment
+python3 -m venv venv
+
+# Activate it
+# On macOS/Linux:
+source venv/bin/activate
+# On Windows:
+# venv\Scripts\activate
+
+# Install dependencies
+pip install -r requirements.txt
+```
+
+### Step 3.2: Configure Environment Variables
+
+```bash
+# Copy the example environment file
+cp .env.example .env
+
+# Edit the .env file with your credentials
+nano .env
+```
+
+Update the following values:
+```env
+# Use your Vultr server IP address
+DB_HOST=your_vultr_server_ip
+DB_PORT=5432
+DB_NAME=robot_monitor_db
+DB_USER=robot_user
+DB_PASSWORD=your_secure_password
+
+# Robot configuration
+ROBOT_ID=ROBOT-001
+DATA_INTERVAL_SECONDS=5
+BATTERY_DRAIN_RATE=0.5
+ANOMALY_PROBABILITY=0.15
+
+# Thresholds
+BATTERY_LOW_THRESHOLD=20
+TEMPERATURE_HIGH_THRESHOLD=80
+
+# MindsDB (we'll use this later)
+MINDSDB_HOST=your_vultr_server_ip
+MINDSDB_PORT=47334
+
+# Gemini API key (get from Google AI Studio)
+GEMINI_API_KEY=your_gemini_api_key_here
+```
+
+### Step 3.3: Test the Connection
+
+```bash
+# Navigate to simulator directory
+cd simulator
+
+# Run the simulator
+python robot_simulator.py
+```
+
+**Expected Output:**
+```
+Initialized Robot Simulator for ROBOT-001
+Configuration:
+  - Data interval: 5s
+  - Battery drain rate: 0.5% per reading
+  - Anomaly probability: 15.0%
+  - Battery anomaly threshold: <20%
+  - Temperature anomaly threshold: >80°C
+  - Database enabled: True
+--------------------------------------------------------------------------------
+Connecting to database at your_vultr_server_ip:5432...
+✅ Database connection established successfully
+--------------------------------------------------------------------------------
+🤖 Starting robot telemetry simulation...
+Press Ctrl+C to stop
+
+[0001] Robot: ROBOT-001 | Battery:  99.50% | Temp: 56.34°C | Status: ✅ OK 💾
+[0002] Robot: ROBOT-001 | Battery:  99.00% | Temp: 54.21°C | Status: ✅ OK 💾
+[0003] Robot: ROBOT-001 | Battery:  98.50% | Temp: 57.89°C | Status: ✅ OK 💾
+```
+
+The 💾 icon indicates data is being successfully stored in your database.
+
+**✅ Checkpoint**: Let the simulator run for a few minutes to generate test data. You can verify by connecting to your database:
+
+```bash
+# On your Vultr server
+sudo -u postgres psql -d robot_monitor_db -c "SELECT COUNT(*) FROM robot_telemetry;"
+```
+
+---
+
+## Part 4: Setting Up MindsDB
+
+MindsDB is the bridge between your database and AI models. It allows you to query AI models using standard SQL.
+
+### Step 4.1: Install MindsDB via Docker
+
+We'll install MindsDB on your local machine using Docker for easier setup:
+
+1. **Open Docker Desktop**
+
+2. **Go to Extensions**
+   Click on the "Extensions" tab in the Docker Desktop sidebar
+
+   ![Docker MindsDB Install](./images/mindsDB-install-docker.png)
+
+3. **Search for MindsDB**
+   In the search bar, type "MindsDB" and click **Install**
+
+4. **Launch MindsDB**
+   Once installed, click **"Open"** to launch the MindsDB interface
+
+### Step 4.2: Complete MindsDB Onboarding
+
+MindsDB will walk you through a quick onboarding process:
+
+1. **Welcome Screen**
+   Click **"Create & Continue"**
+
+   ![MindsDB Welcome](./images/mindsdb-welcome.png)
+
+2. **Connect Data Source**
+   Click **"Create & Continue"** (we'll connect our actual database in a moment)
+
+   ![MindsDB Connect Datasource](./images/connect-data-source-mindsdb.png)
+
+3. **Create Agent Tutorial**
+   Click **"Create & Continue"**
+
+   ![MindsDB Create an Agent Steps](./images/create-an-agent-mindsdb.png)
+
+4. **Setup Complete**
+   You'll see the main MindsDB interface
+
+   ![Finish setup MindsDB](./images/finish-setup-mindsdb.png)
+
+**Alternative Access**: If you prefer not to use Docker Desktop's UI, you can access MindsDB directly at `http://localhost:47334/` in your web browser.
+
+### Step 4.3: Configure Gemini API in MindsDB
+
+Before connecting to your database, set up the Gemini AI model:
+
+1. **Get Your Gemini API Key**
+   - Visit [Google AI Studio](https://aistudio.google.com/apikey)
+   - Click **"Create API Key"**
+   - Copy the generated key
+
+2. **Configure in MindsDB**
+   - In MindsDB, click the **Settings icon** (gear icon, top right)
+   - Navigate to **Models > Default Model**
+   - Select **"Google"** as the provider
+   - Enter **"gemini-pro"** as the model name
+   - Paste your API key
+   - Click **"Save Preferences"**
+
+### Step 4.4: Test MindsDB with Hello World Example
+
+1. **Open SQL Editor**
+   Click on **"SQL Editor"** in the left sidebar
+
+   ![MindsDB SQL editor](./images/click-sql-editor-mindsdb.png)
+
+2. **Run the Hello World Example**
+   You'll see a pre-loaded "Hello World" tutorial. Click the green **"RUN"** button to execute it.
+
+   ![MindsDB hello world](./images/hello-world-mindsdb.png)
+
+**What This Example Does:**
+
+The Hello World tutorial demonstrates MindsDB's core capabilities:
+
+1. **CONNECT**: Creates a connection to a demo PostgreSQL database
+   ```sql
+   CREATE DATABASE demo_db
+   WITH ENGINE = "postgres",
+   PARAMETERS = {...};
+   ```
+
+2. **UNIFY**: Transforms and enriches Amazon reviews data using AI
+   - Extracts product categories from product names using LLM
+   - Analyzes sentiment of reviews using LLM
+   - Creates organized tables: `enriched_products` and `enriched_reviews`
+
+3. **RESPOND**: Creates an intelligent agent that can answer natural language questions
+   ```sql
+   CREATE AGENT amazon_reviews_agent
+   USING data = {"tables": ['files.enriched_reviews', 'files.enriched_products']};
+   ```
+
+You can then query the agent:
+```sql
+SELECT answer FROM amazon_reviews_agent
+WHERE question = 'What type of product has the best reviews?';
+```
+
+This example shows how MindsDB seamlessly combines SQL with AI to analyze data and provide insights.
+
+### Step 4.5: Test the Agent Interface
+
+1. **Navigate to Chat Interface**
+   Click **"Chat with your data"** in the left sidebar
+
+   ![MindsDB chat with my data sidebar](./images/chat-with-your-data-sidebar.png)
+
+2. **Try the Agent**
+   You'll see a chat interface where you can interact with the agent you just created
+
+   ![MindsDB chat with data](./images/chat-with-data-mindsdb.png)
+
+3. **Ask Questions**
+   Try asking questions like:
+   - "What products have the most reviews?"
+   - "Show me the sentiment distribution"
+   - "Which category has the best ratings?"
+
+**✅ Checkpoint**: You've successfully set up MindsDB and understand how it works!
+
+---
+
+## Part 5: Connecting Your Robot Database to MindsDB
+
+Now let's connect MindsDB to your actual robot telemetry database.
+
+### Step 5.1: Add Your Database Connection
+
+1. **Navigate to Onboarding**
+   Click **"Onboarding"** in the left sidebar, then **"Connect your data"**
+
+2. **Select PostgreSQL**
+   Search for "PostgreSQL" and click on it
+
+   ![MindsDB select postgres](./images/postgres-mindsdb-2.png)
+
+3. **Enter Database Credentials**
+   Fill in the connection details (same as your `.env` file):
+
+   ![MindsDB set up postgres](./images/set-up-postgres-mindsdb.png)
+
+   - **Display Name**: `robot_postgres_db`
+   - **Host**: Your Vultr server IP
+   - **Port**: `5432`
+   - **Database**: `robot_monitor_db`
+   - **User**: `robot_user`
+   - **Password**: Your database password
+
+4. **Test and Save**
+   Click **"Test Connection"** to verify, then **"Save"**
+
+### Step 5.2: Create a New SQL Script
+
+1. **Open SQL Editor**
+   Go back to the SQL Editor
+
+2. **Create New Tab**
+   Click the **"+"** icon next to "Hello World"
+
+   ![MindsDB select new datasource](./images/new-datasource-mindsdb.png)
+
+   ![MindsDB new datasource](./images/new-datasource-mindsdb(2).png)
+
+3. **Name Your Script**
+   Call it something like "Robot Monitor Setup"
+
+### Step 5.3: Set Up Your Robot Monitoring System
+
+Copy and paste the contents of [`mindsdb_setup.sql`](./mindsdb/mindsdb_setup.sql) into the SQL Editor. This comprehensive script will:
+
+> 📁 **View the complete MindsDB setup script**: [`mindsdb/mindsdb_setup.sql`](./mindsdb/mindsdb_setup.sql)
+
+**Step 1: Connect to PostgreSQL** (if you didn't do it via UI)
+```sql
+CREATE DATABASE robot_postgres_db
+WITH ENGINE = "postgres",
+PARAMETERS = {
+  "user": "robot_user",
+  "password": "your_password",
+  "host": "your_vultr_ip",
+  "port": "5432",
+  "database": "robot_monitor_db"
+};
+```
+
+**Step 2: Create Anomaly Detection View**
+This view automatically filters for problematic readings:
+- Battery level < 20% (low battery warning)
+- Temperature > 80°C (overheating warning)
+
+It also assigns severity levels (CRITICAL, WARNING, OK) and categorizes issues.
+
+```sql
+CREATE VIEW anomalous_robots AS
+SELECT
+    timestamp,
+    robot_id,
+    battery_level,
+    temperature_celsius,
+    status_code,
+    CASE
+        WHEN battery_level < 10 OR temperature_celsius > 90 THEN 'CRITICAL'
+        WHEN battery_level < 20 OR temperature_celsius > 80 THEN 'WARNING'
+        ELSE 'OK'
+    END as severity,
+    CASE
+        WHEN battery_level < 20 AND temperature_celsius > 80 THEN 'Low Battery + High Temperature'
+        WHEN battery_level < 20 THEN 'Low Battery'
+        WHEN temperature_celsius > 80 THEN 'High Temperature'
+        ELSE 'Normal'
+    END as issue_type
+FROM robot_postgres_db.robot_telemetry
+WHERE battery_level < 20 OR temperature_celsius > 80
+ORDER BY timestamp DESC;
+```
+
+**Step 3: Create Gemini AI Model**
+This model generates human-readable maintenance reports:
+
+```sql
+CREATE MODEL gemini_robot_reporter
+PREDICT report
+USING
     engine = 'gemini',
-    api_key = 'your_api_key',
-    prompt_template = 'A robot named {{robot_id}} has an alert...';
+    model_name = 'gemini-pro',
+    prompt_template = 'You are an expert robot maintenance analyst...';
+```
+
+The prompt instructs Gemini to provide:
+1. Severity assessment (Low/Medium/High/Critical)
+2. Root cause analysis
+3. Immediate action steps
+4. Recommended action (CONTINUE_OPERATION / SCHEDULE_MAINTENANCE / RETURN_TO_BASE / EMERGENCY_STOP)
+
+**Step 4: Generate AI Reports**
+Query that combines anomalies with AI analysis:
+
+```sql
+SELECT
+    a.timestamp,
+    a.robot_id,
+    a.battery_level,
+    a.temperature_celsius,
+    a.severity,
+    a.issue_type,
+    g.report as ai_maintenance_report
+FROM anomalous_robots AS a
+JOIN gemini_robot_reporter AS g
+LIMIT 5;
+```
+
+This is where the magic happens! The `JOIN` operation sends each anomaly to Gemini, which returns a detailed maintenance report.
+
+**Step 5: Store Reports**
+Creates a persistent table to save AI-generated reports for historical analysis:
+
+```sql
+CREATE TABLE files.robot_anomaly_reports (
+    SELECT ... FROM anomalous_robots AS a JOIN gemini_robot_reporter AS g
+);
+```
+
+**Step 6: Useful Queries**
+The script includes helpful queries like:
+- Get the most recent anomaly with AI report
+- Count anomalies by type and severity
+- Monitor critical issues in real-time
+
+4. **Run the Script**
+   Click the green **"RUN"** button and wait for it to complete (may take 30-60 seconds)
+
+**✅ Checkpoint**: Verify the connection works:
+```sql
+SELECT * FROM robot_postgres_db.robot_telemetry
+ORDER BY timestamp DESC
+LIMIT 10;
+```
+
+You should see your robot telemetry data!
+
+---
+
+## Part 6: Creating the Intelligent Agent
+
+Now let's create an agent that can answer natural language questions about your robot fleet.
+
+### Step 6.1: Create the Agent
+
+1. **Navigate to Agents**
+   In the left sidebar, hover over the **"Agents"** folder
+
+2. **Create New Agent**
+   Click the **three dots (...)** and select **"Create Agent"**
+
+   ![MindsDB Create an Agent](./images/create-agent-mindsdb.png)
+
+3. **Add Agent Code**
+   Replace the default code with the contents of [`create_agent.sql`](./mindsdb/create_agent.sql):
+
+> 📁 **View the agent creation script**: [`mindsdb/create_agent.sql`](./mindsdb/create_agent.sql)
+
+```sql
+-- ============================================================================
+-- CREATE ROBOT MONITORING AGENT
+-- ============================================================================
+-- This agent can answer natural language questions about robot telemetry data
+-- and anomalies using Google Gemini AI.
+--
+-- Prerequisites:
+--   1. robot_postgres_db connection created
+--   2. anomalous_robots view created
+--   3. Gemini API key configured in MindsDB Settings
+-- ============================================================================
+
+CREATE AGENT robot_monitor_agent
+USING
+    data = {
+        "tables": [
+            "robot_postgres_db.robot_telemetry",
+            "anomalous_robots"
+        ]
+    };
+
+-- Verify agent was created successfully:
+SHOW AGENTS;
+```
+
+**What This Does:**
+
+The agent is given access to two data sources:
+- `robot_postgres_db.robot_telemetry` - All historical robot data
+- `anomalous_robots` - Filtered view of problematic readings
+
+When you ask a question, the agent:
+1. Understands your natural language query
+2. Translates it into SQL queries
+3. Retrieves relevant data
+4. Formulates a human-readable answer using Gemini
+
+4. **Run the Script**
+   Click **"RUN"** to create the agent
+
+### Step 6.2: Chat with Your Agent
+
+1. **Navigate to Chat Interface**
+   Click **"Chat with your data"** in the left sidebar
+
+   ![MindsDB chat with my data sidebar](./images/chat-with-your-data-sidebar.png)
+
+2. **Select Your Agent**
+   On the right sidebar under "Agents", click on **"robot_monitor_agent"**
+
+   ![MindsDB select agent](./images/select-agent-mindsdb.png)
+
+3. **Start Asking Questions**
+   Try these example prompts:
+
+   **Basic Status Queries:**
+   - "What is the current status of ROBOT-001?"
+   - "Show me the latest 5 readings"
+   - "What's the average battery level over the last hour?"
+
+   **Anomaly Analysis:**
+   - "How many anomalies occurred today?"
+   - "List all critical issues from the past 24 hours"
+   - "What types of failures are most common?"
+   - "Show me robots with temperature above 85°C"
+
+   **Predictive Maintenance:**
+   - "Should we schedule maintenance for ROBOT-001?"
+   - "Which robot needs attention most urgently?"
+   - "Are there any patterns in the anomalies?"
+
+   **Statistical Queries:**
+   - "What's the battery drain rate?"
+   - "Show me the temperature trend over time"
+   - "Calculate uptime percentage for ROBOT-001"
+
+   **Complex Questions:**
+   - "Compare battery performance before and after anomalies"
+   - "What's the correlation between temperature and status code?"
+   - "Summarize robot health for the past week"
+
+The agent will analyze your data and provide intelligent, context-aware answers!
+
+---
+
+## Part 7: Testing Your System End-to-End
+
+Let's verify everything is working together.
+
+### Test Scenario 1: Low Battery Alert
+
+1. **Wait for Low Battery**
+   Let your simulator run until battery drops below 20%
+
+2. **Query for Anomalies**
+   In MindsDB SQL Editor:
+   ```sql
+   SELECT * FROM anomalous_robots
+   WHERE issue_type = 'Low Battery'
+   ORDER BY timestamp DESC
+   LIMIT 3;
+   ```
+
+3. **Get AI Analysis**
+   ```sql
+   SELECT
+       a.robot_id,
+       a.battery_level,
+       a.severity,
+       g.report
+   FROM anomalous_robots AS a
+   JOIN gemini_robot_reporter AS g
+   WHERE a.issue_type = 'Low Battery'
+   ORDER BY a.timestamp DESC
+   LIMIT 1;
+   ```
+
+4. **Verify Gemini Response**
+   The report should recommend "RETURN_TO_BASE" or "SCHEDULE_MAINTENANCE"
+
+### Test Scenario 2: High Temperature Alert
+
+Since temperature anomalies are randomly injected, you might need to wait or temporarily increase `ANOMALY_PROBABILITY` in your `.env` file.
+
+1. **Check for Temperature Anomalies**
+   ```sql
+   SELECT * FROM anomalous_robots
+   WHERE issue_type = 'High Temperature'
+   ORDER BY timestamp DESC
+   LIMIT 3;
+   ```
+
+2. **Ask the Agent**
+   In the chat interface: "Are there any overheating issues?"
+
+### Test Scenario 3: Agent Intelligence
+
+Ask progressively complex questions:
+
+1. "How many total readings do we have?"
+2. "What percentage are anomalies?"
+3. "Should I be concerned about ROBOT-001's performance?"
+4. "Create a maintenance schedule recommendation"
+
+---
+
+## Troubleshooting
+
+### Simulator Won't Connect to Database
+
+**Error**: `Failed to connect to database`
+
+**Solutions**:
+- Verify Vultr firewall allows port 5432
+- Check `.env` has correct IP address
+- Confirm PostgreSQL is running: `sudo systemctl status postgresql`
+- Test connection manually:
+  ```bash
+  psql -h your_vultr_ip -U robot_user -d robot_monitor_db
   ```
 
-- [ ] 4.5 Test the integration
-  - Verify anomaly view returns correct data
-  - Test Gemini model response generation
+### MindsDB Can't Query Database
 
-**Deliverables**:
-- MindsDB connected to PostgreSQL
-- Anomaly detection view created
-- Gemini model configured and tested
-- SQL query files documented
+**Error**: Database connection timeout
 
----
+**Solutions**:
+- Verify the connection details in MindsDB match your `.env`
+- Check that PostgreSQL allows remote connections (Step 2.6)
+- Ensure `pg_hba.conf` includes the `0.0.0.0/0` rule
 
-### Phase 5: AI-Powered Alert System
+### Gemini Model Not Working
 
-**Objective**: Query MindsDB to generate AI-powered maintenance reports
+**Error**: Model prediction fails
 
-**Tasks**:
-- [ ] 5.1 Create the main query that joins anomalies with Gemini
-  ```sql
-  SELECT
-    r.robot_id,
-    r.battery_level,
-    r.temperature_celsius,
-    r.timestamp,
-    g.report
-  FROM anomalous_robots AS r
-  JOIN gemini_robot_reporter AS g;
-  ```
+**Solutions**:
+- Verify API key is correct in MindsDB Settings
+- Check you have Gemini API credits remaining
+- Ensure model name is exactly `gemini-pro`
+- Try recreating the model with a simpler prompt
 
-- [ ] 5.2 Refine Gemini prompt template
-  - Include context: battery level, temperature, timestamp
-  - Request structured output (severity, steps, action)
-  - Test with various anomaly scenarios
+### No Anomalies Showing Up
 
-- [ ] 5.3 Create monitoring script (optional)
-  - Python script that periodically runs the query
-  - Displays alerts in real-time
-  - Logs reports to file
+**Issue**: `anomalous_robots` view is empty
 
-**Deliverables**:
-- Working query that generates AI reports
-- Refined prompt template
-- Optional monitoring dashboard/script
+**Solutions**:
+- Let simulator run longer (anomalies are random)
+- Temporarily increase `ANOMALY_PROBABILITY` in `.env` to 0.5 (50%)
+- Manually verify thresholds: `SELECT * FROM robot_telemetry WHERE battery_level < 20;`
 
 ---
 
-### Phase 6: Testing & Validation
+## What You've Built
 
-**Objective**: Ensure the entire system works end-to-end
+Congratulations! You've created a production-ready AI-powered monitoring system:
 
-**Tasks**:
-- [ ] 6.1 End-to-end testing
-  - Start simulator with normal data
-  - Verify data appears in PostgreSQL
-  - Trigger anomalies (low battery, high temp)
-  - Verify MindsDB detects anomalies
-  - Confirm Gemini generates appropriate reports
+✅ **Cloud Infrastructure**: PostgreSQL database hosted on Vultr
+✅ **Real-time Data Pipeline**: Python simulator generating realistic telemetry
+✅ **AI Integration**: MindsDB connecting Gemini AI to your database
+✅ **Anomaly Detection**: Automated filtering and severity classification
+✅ **Natural Language Reports**: AI-generated maintenance recommendations
+✅ **Intelligent Chatbot**: Agent that answers questions about your robot fleet
 
-- [ ] 6.2 Edge case testing
-  - No anomalies present
-  - Multiple simultaneous anomalies
-  - Rapid anomaly generation
-  - Database connection failures
+## Next Steps & Improvements
 
-- [ ] 6.3 Performance testing
-  - Simulate high-frequency data (1 record/second)
-  - Test MindsDB query response time
-  - Monitor resource usage on Vultr instance
+### Immediate Enhancements
+1. **Multiple Robots**: Modify simulator to create `ROBOT-002`, `ROBOT-003`, etc.
+2. **Email Alerts**: Set up notifications when critical anomalies occur
+3. **Web Dashboard**: Build a React/Vue frontend to visualize data
+4. **Scheduled Reports**: Create daily maintenance summaries
 
-**Deliverables**:
-- Test results documentation
-- Performance benchmarks
-- Bug fixes for identified issues
+### Advanced Features
+5. **Predictive Maintenance**: Use MindsDB's built-in ML models to predict failures
+6. **Historical Analysis**: Train models on past data to detect patterns
+7. **Slack Integration**: Send alerts to a Slack channel
+8. **Custom Metrics**: Add motor speed, location tracking, task completion rate
+9. **Multi-database Support**: Connect to MongoDB, MySQL, or other data sources
+10. **Real-time Dashboard**: Use WebSockets for live updates
 
----
+### Production Readiness
+11. **Authentication**: Secure your MindsDB and PostgreSQL with proper auth
+12. **SSL/TLS**: Enable encrypted connections
+13. **Backup Strategy**: Set up automated database backups
+14. **Monitoring**: Add Grafana or Prometheus for system metrics
+15. **Load Testing**: Simulate 100+ robots to test scalability
 
-### Phase 7: Documentation & Tutorial
+## Learning Resources
 
-**Objective**: Create comprehensive documentation for users to follow
-
-**Tasks**:
-- [ ] 7.1 Write step-by-step tutorial (TUTORIAL.md)
-  - Prerequisites and requirements
-  - Detailed setup instructions for each phase
-  - Screenshots and code examples
-  - Expected outputs at each step
-
-- [ ] 7.2 Create troubleshooting guide
-  - Common connection issues
-  - MindsDB configuration problems
-  - Gemini API errors
-  - Solutions and workarounds
-
-- [ ] 7.3 Document architecture decisions
-  - Why these specific technologies
-  - Alternative approaches considered
-  - Scalability considerations
-
-- [ ] 7.4 Add code comments and docstrings
-  - Python code documentation
-  - SQL query explanations
-  - Configuration file comments
-
-**Deliverables**:
-- Complete TUTORIAL.md
-- TROUBLESHOOTING.md
-- ARCHITECTURE.md
-- Well-commented code
+- **MindsDB Documentation**: [docs.mindsdb.com](https://docs.mindsdb.com)
+- **Gemini API Reference**: [ai.google.dev](https://ai.google.dev)
+- **Vultr Tutorials**: [vultr.com/docs](https://www.vultr.com/docs/)
+- **PostgreSQL Guide**: [postgresql.org/docs](https://www.postgresql.org/docs/)
 
 ---
 
-### Phase 8: Polish & Extras (Optional Enhancements)
+**🎉 You did it!** You've successfully built an AI-powered robot monitoring system from scratch. This architecture can be adapted for IoT devices, server monitoring, vehicle fleets, or any system that generates time-series data and needs intelligent analysis.
 
-**Objective**: Add nice-to-have features and improvements
-
-**Tasks**:
-- [ ] 8.1 Create a simple web dashboard
-  - Display current robot status
-  - Show recent alerts
-  - Visualize telemetry trends
-
-- [ ] 8.2 Add email/Slack notifications
-  - Send alerts when anomalies detected
-  - Integrate with notification services
-
-- [ ] 8.3 Multiple robot support
-  - Extend simulator to handle fleet of robots
-  - Update queries for fleet monitoring
-
-- [ ] 8.4 Historical analysis
-  - Query for trends over time
-  - Generate weekly summaries with Gemini
-
-**Deliverables**:
-- Enhanced features (as time permits)
-- Additional documentation
-
----
-
-## 🛠️ Technology Stack
-
-- **Vultr**: Cloud infrastructure hosting
-- **PostgreSQL**: Time-series telemetry data storage
-- **MindsDB**: ML/AI integration layer and query orchestration
-- **Gemini API**: Natural language report generation
-- **Python**: Robot simulator and utility scripts
-
-## 📋 Prerequisites
-
-- Vultr account with billing enabled
-- Google AI Studio account (for Gemini API key)
-- Basic knowledge of SQL, Python, and command line
-- SSH client for server access
-
-## ⏱️ Estimated Timeline
-
-- **Infrastructure Setup**: 2-3 hours
-- **Database & Simulator**: 2-3 hours
-- **MindsDB Integration**: 2-4 hours
-- **Testing & Documentation**: 3-4 hours
-- **Total**: 9-14 hours (spread over 2-3 days)
-
-## 🎓 Learning Outcomes
-
-By completing this project, you will learn:
-- How to deploy and configure cloud infrastructure on Vultr
-- PostgreSQL database design and management
-- MindsDB's approach to AI/ML integration via SQL
-- Gemini API for natural language generation
-- Building end-to-end data pipelines
-- System monitoring and alerting patterns
-
-## 📝 License
-
-MIT License - Feel free to use this tutorial for educational purposes.
-
-## 🤝 Contributing
-
-This is a tutorial project. Suggestions and improvements are welcome via issues or pull requests.
-
----
-
-**Next Step**: Begin with Phase 1 - Infrastructure Setup. See `config/vultr_setup.md` for detailed instructions.
+Happy building!
