@@ -77,7 +77,7 @@ Vultr will host both our PostgreSQL database and MindsDB instance in the cloud, 
 1. **Navigate to Vultr Dashboard**
    Go to [my.vultr.com/dashboard](https://my.vultr.com/dashboard/) and click the **"Deploy +"** button in the top right corner.
 
-   ![Deploy a server](./images/dashboard-deploy-server.png)
+   ![Deploy a server](https://res.cloudinary.com/dygkv9gam/image/upload/v1770362060/robot-monitor/dashboard-deploy-server.png)
 
 2. **Choose Server Type**
    - Select **"Cloud Compute"** for a standard virtual machine
@@ -103,7 +103,7 @@ Vultr will host both our PostgreSQL database and MindsDB instance in the cloud, 
 
    > **Note**: You need to complete your profile and add a valid payment method to deploy a server.
 
-   ![Deploy a server configuration](./images/deploy-a-server.png)
+   ![Deploy a server configuration](https://res.cloudinary.com/dygkv9gam/image/upload/v1770362102/robot-monitor/deploy-a-server.png)
 
 8. **Wait for Deployment**
    Server deployment typically takes 2-5 minutes. Once ready, you'll see the status change to **"Running"**.
@@ -113,7 +113,7 @@ Vultr will host both our PostgreSQL database and MindsDB instance in the cloud, 
 1. Click on your newly created server from the dashboard
 2. Copy the **IP Address** and **Password** (if not using SSH keys)
 
-   ![Server Dashboard](./images/server-dashboard.png)
+   ![Server Dashboard](https://res.cloudinary.com/dygkv9gam/image/upload/v1770362092/robot-monitor/server-dashboard.png)
 
 3. **Connect via SSH**:
    ```bash
@@ -373,7 +373,7 @@ We'll install MindsDB on your local machine using Docker for easier setup:
 2. **Go to Extensions**
    Click on the "Extensions" tab in the Docker Desktop sidebar
 
-   ![Docker MindsDB Install](./images/mindsDB-install-docker.png)
+   ![Docker MindsDB Install](https://res.cloudinary.com/dygkv9gam/image/upload/v1770362097/robot-monitor/mindsDB-install-docker.png)
 
 3. **Search for MindsDB**
    In the search bar, type "MindsDB" and click **Install**
@@ -388,22 +388,22 @@ MindsDB will walk you through a quick onboarding process:
 1. **Welcome Screen**
    Click **"Create & Continue"**
 
-   ![MindsDB Welcome](./images/mindsdb-welcome.png)
+   ![MindsDB Welcome](https://res.cloudinary.com/dygkv9gam/image/upload/v1770362069/robot-monitor/mindsdb-welcome.png)
 
 2. **Connect Data Source**
    Click **"Create & Continue"** (we'll connect our actual database in a moment)
 
-   ![MindsDB Connect Datasource](./images/connect-data-source-mindsdb.png)
+   ![MindsDB Connect Datasource](https://res.cloudinary.com/dygkv9gam/image/upload/v1770362077/robot-monitor/connect-data-source-mindsdb.png)
 
 3. **Create Agent Tutorial**
    Click **"Create & Continue"**
 
-   ![MindsDB Create an Agent Steps](./images/create-an-agent-mindsdb.png)
+   ![MindsDB Create an Agent Steps](https://res.cloudinary.com/dygkv9gam/image/upload/v1770362072/robot-monitor/create-an-agent-mindsdb.png)
 
 4. **Setup Complete**
    You'll see the main MindsDB interface
 
-   ![Finish setup MindsDB](./images/finish-setup-mindsdb.png)
+   ![Finish setup MindsDB](https://res.cloudinary.com/dygkv9gam/image/upload/v1770362095/robot-monitor/finish-setup-mindsdb.png)
 
 **Alternative Access**: If you prefer not to use Docker Desktop's UI, you can access MindsDB directly at `http://localhost:47334/` in your web browser.
 
@@ -429,12 +429,12 @@ Before connecting to your database, set up the Gemini AI model:
 1. **Open SQL Editor**
    Click on **"SQL Editor"** in the left sidebar
 
-   ![MindsDB SQL editor](./images/click-sql-editor-mindsdb.png)
+   ![MindsDB SQL editor](https://res.cloudinary.com/dygkv9gam/image/upload/v1770362109/robot-monitor/click-sql-editor-mindsdb.png)
 
 2. **Run the Hello World Example**
    You'll see a pre-loaded "Hello World" tutorial. Click the green **"RUN"** button to execute it.
 
-   ![MindsDB hello world](./images/hello-world-mindsdb.png)
+   ![MindsDB hello world](https://res.cloudinary.com/dygkv9gam/image/upload/v1770362079/robot-monitor/hello-world-mindsdb.png)
 
 **What This Example Does:**
 
@@ -471,12 +471,12 @@ This example shows how MindsDB seamlessly combines SQL with AI to analyze data a
 1. **Navigate to Chat Interface**
    Click **"Chat with your data"** in the left sidebar
 
-   ![MindsDB chat with my data sidebar](./images/chat-with-your-data-sidebar.png)
+   ![MindsDB chat with my data sidebar](https://res.cloudinary.com/dygkv9gam/image/upload/v1770362074/robot-monitor/chat-with-your-data-sidebar.png)
 
 2. **Try the Agent**
    You'll see a chat interface where you can interact with the agent you just created
 
-   ![MindsDB chat with data](./images/chat-with-data-mindsdb.png)
+   ![MindsDB chat with data](https://res.cloudinary.com/dygkv9gam/image/upload/v1770362065/robot-monitor/chat-with-data-mindsdb.png)
 
 3. **Ask Questions**
    Try asking questions like:
@@ -500,12 +500,12 @@ Now let's connect MindsDB to your actual robot telemetry database.
 2. **Select PostgreSQL**
    Search for "PostgreSQL" and click on it
 
-   ![MindsDB select postgres](./images/postgres-mindsdb-2.png)
+   ![MindsDB select postgres](https://res.cloudinary.com/dygkv9gam/image/upload/v1770362110/robot-monitor/postgres-mindsdb-2.png)
 
 3. **Enter Database Credentials**
    Fill in the connection details (same as your `.env` file):
 
-   ![MindsDB set up postgres](./images/set-up-postgres-mindsdb.png)
+   ![MindsDB set up postgres](https://res.cloudinary.com/dygkv9gam/image/upload/v1770362099/robot-monitor/set-up-postgres-mindsdb.png)
 
    - **Display Name**: `robot_postgres_db`
    - **Host**: Your Vultr server IP
@@ -525,9 +525,9 @@ Now let's connect MindsDB to your actual robot telemetry database.
 2. **Create New Tab**
    Click the **"+"** icon next to "Hello World"
 
-   ![MindsDB select new datasource](./images/new-datasource-mindsdb.png)
+   ![MindsDB select new datasource](https://res.cloudinary.com/dygkv9gam/image/upload/v1770362063/robot-monitor/new-datasource-mindsdb.png)
 
-   ![MindsDB new datasource](./images/new-datasource-mindsdb(2).png)
+   ![MindsDB new datasource](https://res.cloudinary.com/dygkv9gam/image/upload/v1770362104/robot-monitor/new-datasource-mindsdb%282%29.png)
 
 3. **Name Your Script**
    Call it something like "Robot Monitor Setup"
@@ -660,7 +660,7 @@ Now let's create an agent that can answer natural language questions about your 
 2. **Create New Agent**
    Click the **three dots (...)** and select **"Create Agent"**
 
-   ![MindsDB Create an Agent](./images/create-agent-mindsdb.png)
+   ![MindsDB Create an Agent](https://res.cloudinary.com/dygkv9gam/image/upload/v1770362089/robot-monitor/create-agent-mindsdb.png)
 
 3. **Add Agent Code**
    Replace the default code with the contents of [`create_agent.sql`](./mindsdb/create_agent.sql):
@@ -713,12 +713,12 @@ When you ask a question, the agent:
 1. **Navigate to Chat Interface**
    Click **"Chat with your data"** in the left sidebar
 
-   ![MindsDB chat with my data sidebar](./images/chat-with-your-data-sidebar.png)
+   ![MindsDB chat with my data sidebar](https://res.cloudinary.com/dygkv9gam/image/upload/v1770362074/robot-monitor/chat-with-your-data-sidebar.png)
 
 2. **Select Your Agent**
    On the right sidebar under "Agents", click on **"robot_monitor_agent"**
 
-   ![MindsDB select agent](./images/select-agent-mindsdb.png)
+   ![MindsDB select agent](https://res.cloudinary.com/dygkv9gam/image/upload/v1770362067/robot-monitor/select-agent-mindsdb.png)
 
 3. **Start Asking Questions**
    Try these example prompts:
